@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Tracking Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/highcharts-more.js"></script>
+    <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
+    <script src="https://code.highcharts.com/modules/heatmap.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        body { font-family: 'Inter', sans-serif; }
+        .status-indicator { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- Header -->
+<header id="header" class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-truck text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">FleetTracker Pro</h1>
+                        <p class="text-xs text-gray-500">Real-time Fleet Management</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 bg-green-50 px-3 py-1.5 rounded-full">
+                        <div class="w-2 h-2 bg-green-500 rounded-full status-indicator"></div>
+                        <span class="text-sm text-green-700 font-medium">Live</span>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        Last Update: <span class="font-medium text-gray-900">2 seconds ago</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-file-excel mr-2"></i>Export Excel
+                    </button>
+                    <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                    </button>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="relative p-2 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images.jpeg" alt="User" class="w-8 h-8 rounded-full">
+                        <span class="text-sm font-medium text-gray-700">Admin User</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Layout -->
+<div class="flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-72 bg-white border-r border-gray-200 h-screen sticky top-16 overflow-y-auto">
+        <div class="p-6">
+            <!-- Quick Filters -->
+            <div id="quick-filters" class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Quick Filters</h3>
+                <div class="space-y-2">
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>All Vehicles</option>
+                        <option>Active Only</option>
+                        <option>Maintenance Due</option>
+                        <option>Offline Vehicles</option>
+                    </select>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Last 24 Hours</option>
+                        <option>Last 7 Days</option>
+                        <option>Last 30 Days</option>
+                        <option>Custom Range</option>
+                    </select>
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>All Zones</option>
+                        <option>Zone A</option>
+                        <option>Zone B</option>
+                        <option>Zone C</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav id="navigation-menu" class="space-y-2">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Navigation</h3>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg font-medium">
+                    <i class="fas fa-tachometer-alt mr-3"></i>
+                    Dashboard
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-map-marked-alt mr-3"></i>
+                    Live Tracking
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-truck mr-3"></i>
+                    Vehicles
+                    <span class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">47</span>
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-user-tie mr-3"></i>
+                    Drivers
+                    <span class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">23</span>
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-route mr-3"></i>
+                    Routes & Trips
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-tools mr-3"></i>
+                    Maintenance
+                    <span class="ml-auto bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">5</span>
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-gas-pump mr-3"></i>
+                    Fuel Usage
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-dollar-sign mr-3"></i>
+                    Cost Analysis
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    Reports
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-video mr-3"></i>
+                    Video
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-bell mr-3"></i>
+                    Notifications
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-users mr-3"></i>
+                    Users
+                </a>
+                
+                <a href="#" class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-cog mr-3"></i>
+                    Settings
+                </a>
+            </nav>
+
+            <!-- Live Vehicle Status Summary -->
+            <div id="live-status-summary" class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Live Status</h4>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Moving</span>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">23</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Idle</span>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">12</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Stopped</span>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">8</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">No Connection</span>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+        <!-- KPI Cards Section -->
+        <section id="kpi-cards" class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 font-medium">Total Vehicles</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-1">47</p>
+                            <p class="text-sm text-green-600 mt-2">
+                                <i class="fas fa-arrow-up mr-1"></i>2 new this month
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-truck text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 font-medium">Active Vehicles</p>
+                            <p class="text-3xl font-bold text-green-600 mt-1">35</p>
+                            <p class="text-sm text-gray-500 mt-2">74% of fleet active</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-play text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 font-medium">Total Distance</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-1">12,847</p>
+                            <p class="text-sm text-gray-500 mt-2">km today</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-route text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 font-medium">Fuel Efficiency</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-1">8.2</p>
+                            <p class="text-sm text-green-600 mt-2">
+                                <i class="fas fa-arrow-down mr-1"></i>L/100km avg
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-gas-pump text-orange-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Map and Status Overview -->
+        <section id="live-map-status" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Live Map -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900">Live Vehicle Tracking</h2>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                    <i class="fas fa-expand mr-2"></i>Fullscreen
+                                </button>
+                                <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="h-96 bg-gray-100 rounded-lg relative overflow-hidden">
+                            <img class="w-full h-full object-cover rounded-lg" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/e948f251f3-c44e907dee9ca613bd00.png" alt="satellite view map showing multiple vehicle locations with GPS tracking pins and route lines, fleet management dashboard style" />
+                            <div class="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-lg">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                        <span class="text-sm text-gray-600">Moving (23)</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                        <span class="text-sm text-gray-600">Idle (12)</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                        <span class="text-sm text-gray-600">Stopped (8)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-4 right-4 bg-white p-2 rounded-lg shadow-lg">
+                                <div class="flex items-center space-x-2">
+                                    <button class="p-2 hover:bg-gray-100 rounded">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button class="p-2 hover:bg-gray-100 rounded">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <button class="p-2 hover:bg-gray-100 rounded">
+                                        <i class="fas fa-crosshairs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Status Panel -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Vehicle Status</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3 status-indicator"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Moving</p>
+                                        <p class="text-xs text-gray-500">Currently in transit</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-green-600">23</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3 status-indicator"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Idle</p>
+                                        <p class="text-xs text-gray-500">Engine on, not moving</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-yellow-600">12</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Stopped</p>
+                                        <p class="text-xs text-gray-500">Parked or turned off</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-red-600">8</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">No Connection</p>
+                                        <p class="text-xs text-gray-500">GPS signal lost</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-gray-600">4</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Battery Low</p>
+                                        <p class="text-xs text-gray-500">Battery disconnected</p>
+                                    </div>
+                                </div>
+                                <span class="text-lg font-bold text-orange-600">2</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <div id="status-chart" class="h-32"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vehicle Performance Analytics -->
+        <section id="performance-analytics" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Distance Analytics -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Distance Analytics</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="distance-chart" class="h-64"></div>
+                        <div class="mt-4 grid grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-blue-600">847</p>
+                                <p class="text-sm text-gray-500">km Today</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-green-600">5,923</p>
+                                <p class="text-sm text-gray-500">km This Week</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-purple-600">24,157</p>
+                                <p class="text-sm text-gray-500">km This Month</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fuel Efficiency -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Fuel Efficiency</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="fuel-chart" class="h-64"></div>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-orange-600">8.2</p>
+                                <p class="text-sm text-gray-500">L/100km Average</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-green-600">$2,847</p>
+                                <p class="text-sm text-gray-500">Fuel Cost Today</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vehicle List and Maintenance -->
+        <section id="vehicle-maintenance" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Vehicle List -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900">Vehicle Fleet Overview</h2>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" placeholder="Search vehicles..." class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Distance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fas fa-truck text-blue-600"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900">ABC-123</p>
+                                                <p class="text-xs text-gray-500">Mercedes Sprinter</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                                            Moving
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images.jpeg" alt="Driver" class="w-6 h-6 rounded-full mr-2">
+                                            <span class="text-sm text-gray-900">John Smith</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">247 km</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Downtown Area</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3">Track</button>
+                                        <button class="text-gray-600 hover:text-gray-900">Details</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fas fa-truck text-blue-600"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900">XYZ-456</p>
+                                                <p class="text-xs text-gray-500">Ford Transit</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            <div class="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1"></div>
+                                            Idle
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Driver" class="w-6 h-6 rounded-full mr-2">
+                                            <span class="text-sm text-gray-900">Mike Johnson</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">189 km</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Warehouse District</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3">Track</button>
+                                        <button class="text-gray-600 hover:text-gray-900">Details</button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fas fa-truck text-blue-600"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900">DEF-789</p>
+                                                <p class="text-xs text-gray-500">Volvo FH16</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <div class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1"></div>
+                                            Stopped
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Driver" class="w-6 h-6 rounded-full mr-2">
+                                            <span class="text-sm text-gray-900">Sarah Wilson</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0 km</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Service Center</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3">Track</button>
+                                        <button class="text-gray-600 hover:text-gray-900">Details</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Maintenance Alerts -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Maintenance Alerts</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div class="flex items-start">
+                                    <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 mr-3"></i>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-red-800">Critical Service Due</p>
+                                        <p class="text-xs text-red-600 mt-1">ABC-123 - Engine service overdue by 2 days</p>
+                                        <p class="text-xs text-red-500 mt-2">Due: 3 days ago</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <div class="flex items-start">
+                                    <i class="fas fa-clock text-yellow-500 mt-0.5 mr-3"></i>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-yellow-800">Service Due Soon</p>
+                                        <p class="text-xs text-yellow-600 mt-1">XYZ-456 - Oil change required</p>
+                                        <p class="text-xs text-yellow-500 mt-2">Due: In 5 days</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                                <div class="flex items-start">
+                                    <i class="fas fa-tools text-orange-500 mt-0.5 mr-3"></i>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-orange-800">Inspection Required</p>
+                                        <p class="text-xs text-orange-600 mt-1">GHI-012 - Annual inspection</p>
+                                        <p class="text-xs text-orange-500 mt-2">Due: In 12 days</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div class="flex items-start">
+                                    <i class="fas fa-tire text-blue-500 mt-0.5 mr-3"></i>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-blue-800">Tire Rotation</p>
+                                        <p class="text-xs text-blue-600 mt-1">JKL-345 - Tire rotation scheduled</p>
+                                        <p class="text-xs text-blue-500 mt-2">Due: In 20 days</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            View All Maintenance
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Route Analysis and Driver Performance -->
+        <section id="route-driver-analysis" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Route Analysis -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Route Efficiency</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="route-chart" class="h-64"></div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Most Efficient Route</span>
+                                <span class="text-sm font-medium text-green-600">Downtown → Warehouse (12.4 km)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Average Route Time</span>
+                                <span class="text-sm font-medium text-gray-900">34 minutes</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Traffic Delays</span>
+                                <span class="text-sm font-medium text-red-600">+8 minutes avg</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Driver Performance -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Driver Performance</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images-2.jpeg" alt="Driver" class="w-10 h-10 rounded-full mr-3">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">John Smith</p>
+                                        <p class="text-xs text-gray-500">Score: 94/100</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-green-600">Excellent</p>
+                                    <p class="text-xs text-gray-500">247 km today</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images-6.jpeg" alt="Driver" class="w-10 h-10 rounded-full mr-3">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Emma Davis</p>
+                                        <p class="text-xs text-gray-500">Score: 91/100</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-blue-600">Very Good</p>
+                                    <p class="text-xs text-gray-500">198 km today</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images-1.jpeg" alt="Driver" class="w-10 h-10 rounded-full mr-3">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Mike Johnson</p>
+                                        <p class="text-xs text-gray-500">Score: 78/100</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-yellow-600">Good</p>
+                                    <p class="text-xs text-gray-500">156 km today</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <img src="https://leanlivingjourney.com/wp-content/uploads/2025/10/images-3.jpeg" alt="Driver" class="w-10 h-10 rounded-full mr-3">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Tom Wilson</p>
+                                        <p class="text-xs text-gray-500">Score: 65/100</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-red-600">Needs Improvement</p>
+                                    <p class="text-xs text-gray-500">89 km today</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="w-full mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                            View Detailed Reports
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cost Analysis and Fuel Management -->
+        <section id="cost-fuel-management" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Cost Breakdown -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Cost Breakdown</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="cost-chart" class="h-48 mb-4"></div>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                    <span class="text-sm text-gray-600">Fuel</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">$12,847</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span class="text-sm text-gray-600">Maintenance</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">$3,245</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                    <span class="text-sm text-gray-600">Insurance</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">$1,892</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                    <span class="text-sm text-gray-600">Other</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-900">$756</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fuel Consumption -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Fuel Consumption</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="fuel-consumption-chart" class="h-48 mb-4"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-orange-600">1,847</p>
+                                <p class="text-xs text-gray-500">Liters Today</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-blue-600">8.2</p>
+                                <p class="text-xs text-gray-500">L/100km Avg</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-3 bg-green-50 rounded-lg">
+                            <p class="text-sm text-green-800 font-medium">Efficiency Improved</p>
+                            <p class="text-xs text-green-600 mt-1">12% better than last month</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Trends -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Monthly Trends</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="trends-chart" class="h-48 mb-4"></div>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Distance Trend</span>
+                                <span class="text-sm font-medium text-green-600">
+                                    <i class="fas fa-arrow-up mr-1"></i>+8.5%
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Fuel Efficiency</span>
+                                <span class="text-sm font-medium text-green-600">
+                                    <i class="fas fa-arrow-up mr-1"></i>+12.3%
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Cost per KM</span>
+                                <span class="text-sm font-medium text-red-600">
+                                    <i class="fas fa-arrow-down mr-1"></i>-5.2%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts and Notifications -->
+        <section id="alerts-notifications" class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Real-time Alerts -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900">Real-time Alerts</h2>
+                            <button class="text-sm text-blue-600 hover:text-blue-800">Mark All Read</button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4 max-h-64 overflow-y-auto">
+                            <div class="flex items-start p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <i class="fas fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-red-800">Speed Violation</p>
+                                    <p class="text-xs text-red-600 mt-1">Vehicle ABC-123 exceeded speed limit (85 km/h in 60 km/h zone)</p>
+                                    <p class="text-xs text-gray-500 mt-2">2 minutes ago</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <i class="fas fa-gas-pump text-yellow-500 mt-1 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-yellow-800">Low Fuel Alert</p>
+                                    <p class="text-xs text-yellow-600 mt-1">Vehicle XYZ-456 fuel level below 15%</p>
+                                    <p class="text-xs text-gray-500 mt-2">5 minutes ago</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <i class="fas fa-route text-blue-500 mt-1 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-blue-800">Route Deviation</p>
+                                    <p class="text-xs text-blue-600 mt-1">Vehicle DEF-789 deviated from planned route</p>
+                                    <p class="text-xs text-gray-500 mt-2">8 minutes ago</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <i class="fas fa-clock text-orange-500 mt-1 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-orange-800">Extended Idle Time</p>
+                                    <p class="text-xs text-orange-600 mt-1">Vehicle GHI-012 idle for 45 minutes</p>
+                                    <p class="text-xs text-gray-500 mt-2">12 minutes ago</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <i class="fas fa-wifi text-gray-500 mt-1 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-800">Connection Lost</p>
+                                    <p class="text-xs text-gray-600 mt-1">Vehicle JKL-345 GPS signal lost</p>
+                                    <p class="text-xs text-gray-500 mt-2">15 minutes ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">System Status</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="fas fa-database text-green-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Database Connection</p>
+                                        <p class="text-xs text-gray-500">MySQL Server</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-green-600">Online</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="fas fa-satellite-dish text-green-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">GPS Tracking</p>
+                                        <p class="text-xs text-gray-500">Real-time positioning</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-green-600">Active</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="fas fa-sync-alt text-green-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Data Refresh</p>
+                                        <p class="text-xs text-gray-500">DirectQuery mode</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-green-600">2s ago</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="fas fa-users text-blue-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Active Users</p>
+                                        <p class="text-xs text-gray-500">Current sessions</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-blue-600">34/50</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="fas fa-server text-yellow-500 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Server Load</p>
+                                        <p class="text-xs text-gray-500">CPU & Memory usage</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium text-yellow-600">78%</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">System Health</span>
+                                <span class="text-green-600 font-medium">Excellent</span>
+                            </div>
+                            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 94%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports and Export Tools -->
+        <section id="reports-export" class="mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">Reports & Export Tools</h2>
+                        <div class="flex items-center space-x-2">
+                            <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-file-excel mr-2"></i>Export to Excel
+                            </button>
+                            <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                <i class="fas fa-file-pdf mr-2"></i>Export to PDF
+                            </button>
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-cog mr-2"></i>Schedule Reports
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Quick Reports -->
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">Quick Reports</h3>
+                            <div class="space-y-2">
+                                <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="fas fa-chart-line mr-2 text-blue-500"></i>Daily Fleet Summary
+                                </button>
+                                <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="fas fa-gas-pump mr-2 text-orange-500"></i>Fuel Consumption Report
+                                </button>
+                                <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="fas fa-tools mr-2 text-green-500"></i>Maintenance Schedule
+                                </button>
+                                <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="fas fa-user-tie mr-2 text-purple-500"></i>Driver Performance
+                                </button>
+                                <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <i class="fas fa-dollar-sign mr-2 text-red-500"></i>Cost Analysis
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Reports -->
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">Custom Reports</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Date Range</label>
+                                    <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option>Last 7 days</option>
+                                        <option>Last 30 days</option>
+                                        <option>Last 3 months</option>
+                                        <option>Custom range</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Vehicles</label>
+                                    <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option>All vehicles</option>
+                                        <option>Active only</option>
+                                        <option>Specific vehicles</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Metrics</label>
+                                    <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option>All metrics</option>
+                                        <option>Distance only</option>
+                                        <option>Fuel only</option>
+                                        <option>Performance only</option>
+                                    </select>
+                                </div>
+                                <button class="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                                    Generate Report
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Scheduled Reports -->
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">Scheduled Reports</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p class="text-sm font-medium text-blue-800">Daily Fleet Summary</p>
+                                    <p class="text-xs text-blue-600 mt-1">Every day at 8:00 AM</p>
+                                    <p class="text-xs text-gray-500 mt-1">Next: Tomorrow 8:00 AM</p>
+                                </div>
+                                <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-sm font-medium text-green-800">Weekly Performance</p>
+                                    <p class="text-xs text-green-600 mt-1">Every Monday at 9:00 AM</p>
+                                    <p class="text-xs text-gray-500 mt-1">Next: Mon 9:00 AM</p>
+                                </div>
+                                <div class="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <p class="text-sm font-medium text-orange-800">Monthly Cost Analysis</p>
+                                    <p class="text-xs text-orange-600 mt-1">First day of month</p>
+                                    <p class="text-xs text-gray-500 mt-1">Next: Dec 1, 2025</p>
+                                </div>
+                                <button class="w-full px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-plus mr-2"></i>Add Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Footer -->
+<footer id="footer" class="bg-white border-t border-gray-200 py-6">
+    <div class="px-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <p class="text-sm text-gray-500">© 2025 FleetTracker Pro. All rights reserved.</p>
+                <div class="flex items-center space-x-4">
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Privacy Policy</a>
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Terms of Service</a>
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Support</a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-500">
+                    Power BI Integration: <span class="text-green-600 font-medium">Connected</span>
+                </div>
+                <div class="text-sm text-gray-500">
+                    Version 2.1.4
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Donut Chart
+    Highcharts.chart('status-chart', {
+        chart: {
+            type: 'pie',
+            height: 120
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        plotOptions: {
+            pie: {
+                innerSize: '60%',
+                dataLabels: { enabled: false },
+                showInLegend: false
+            }
+        },
+        series: [{
+            data: [
+                { name: 'Moving', y: 23, color: '#10B981' },
+                { name: 'Idle', y: 12, color: '#F59E0B' },
+                { name: 'Stopped', y: 8, color: '#EF4444' },
+                { name: 'No Connection', y: 4, color: '#6B7280' }
+            ]
+        }]
+    });
+
+    // Distance Chart
+    Highcharts.chart('distance-chart', {
+        chart: {
+            type: 'areaspline',
+            height: 250
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        xAxis: {
+            categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        },
+        yAxis: {
+            title: { text: 'Distance (km)' }
+        },
+        series: [{
+            name: 'Distance',
+            data: [1200, 1450, 1350, 1600, 1750, 1400, 1300],
+            color: '#3B82F6',
+            fillColor: {
+                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                stops: [
+                    [0, 'rgba(59, 130, 246, 0.3)'],
+                    [1, 'rgba(59, 130, 246, 0.05)']
+                ]
+            }
+        }]
+    });
+
+    // Fuel Chart
+    Highcharts.chart('fuel-chart', {
+        chart: {
+            type: 'column',
+            height: 250
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        xAxis: {
+            categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        },
+        yAxis: {
+            title: { text: 'Fuel (L)' }
+        },
+        series: [{
+            name: 'Fuel Consumption',
+            data: [245, 280, 260, 320, 340, 280, 250],
+            color: '#F97316'
+        }]
+    });
+
+    // Route Chart
+    Highcharts.chart('route-chart', {
+        chart: {
+            type: 'line',
+            height: 250
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        xAxis: {
+            categories: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM']
+        },
+        yAxis: {
+            title: { text: 'Efficiency Score' }
+        },
+        series: [{
+            name: 'Route Efficiency',
+            data: [85, 88, 92, 87, 91, 89, 93],
+            color: '#10B981'
+        }]
+    });
+
+    // Cost Chart
+    Highcharts.chart('cost-chart', {
+        chart: {
+            type: 'pie',
+            height: 180
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        plotOptions: {
+            pie: {
+                dataLabels: { enabled: false },
+                showInLegend: false
+            }
+        },
+        series: [{
+            data: [
+                { name: 'Fuel', y: 12847, color: '#3B82F6' },
+                { name: 'Maintenance', y: 3245, color: '#10B981' },
+                { name: 'Insurance', y: 1892, color: '#F59E0B' },
+                { name: 'Other', y: 756, color: '#EF4444' }
+            ]
+        }]
+    });
+
+    // Fuel Consumption Chart
+    Highcharts.chart('fuel-consumption-chart', {
+        chart: {
+            type: 'spline',
+            height: 180
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        xAxis: {
+            categories: ['W1', 'W2', 'W3', 'W4']
+        },
+        yAxis: {
+            title: { text: 'L/100km' }
+        },
+        series: [{
+            name: 'Efficiency',
+            data: [8.7, 8.4, 8.1, 8.2],
+            color: '#F97316'
+        }]
+    });
+
+    // Trends Chart
+    Highcharts.chart('trends-chart', {
+        chart: {
+            type: 'line',
+            height: 180
+        },
+        credits: { enabled: false },
+        title: { text: null },
+        xAxis: {
+            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        },
+        yAxis: {
+            title: { text: 'Index' }
+        },
+        series: [{
+            name: 'Distance',
+            data: [100, 105, 108, 112, 115, 118],
+            color: '#10B981'
+        }, {
+            name: 'Efficiency',
+            data: [100, 102, 106, 109, 111, 112],
+            color: '#3B82F6'
+        }]
+    });
+
+    // Real-time updates
+    setInterval(function() {
+        // Simulate real-time data updates
+        const statusElements = document.querySelectorAll('.status-indicator');
+        statusElements.forEach(el => {
+            el.style.opacity = el.style.opacity === '0.5' ? '1' : '0.5';
+        });
+    }, 2000);
+});
+</script>
+
+</body>
+</html>
